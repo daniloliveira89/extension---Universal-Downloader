@@ -31,12 +31,22 @@
   }
 
   function getName(item) {
-    const url = new URL(item.url);
+    const ext = item.ext || 'mp3';
+    const preferred = sanitize(item.title || '', '');
+    if (preferred && !/^[a-z\d_-]{8,}(?:\.\d+)?$/i.test(preferred)) {
+      return new RegExp(`\\.${ext}$`, 'i').test(preferred) ? preferred : `${preferred}.${ext}`;
+    }
+    let url;
+    try {
+      url = new URL(item.url);
+    } catch {
+      return sanitize(preferred || `arquivo.${ext}`, `arquivo.${ext}`);
+    }
     let name = ['filename', 'file', 'download', 'name']
-      .map(k => url.searchParams.get(k)).find(t => t && TEXT_RE.test(t)) || url.pathname.split('/').pop();
+      .map(k => url.searchParams?.get(k)).find(t => t && TEXT_RE.test(t)) || url.pathname.split('/').pop();
     try { name = decodeURIComponent(name); } catch { /* sem alteração */ }
-    name = sanitize(name, `arquivo.${item.ext}`);
-    if (!new RegExp(`\\.${item.ext}$`, 'i').test(name)) name += `.${item.ext}`;
+    name = sanitize(name, `arquivo.${ext}`);
+    if (!new RegExp(`\\.${ext}$`, 'i').test(name)) name += `.${ext}`;
     return name;
   }
 
@@ -46,7 +56,9 @@
       !/^(download|baixar|save|salvar|play|listen|ouvir|\d+(?:[.,]\d+)?\s*(?:kb|mb|gb))$/i.test(normalized)) {
       return sanitize(normalized, getName(item));
     }
-    return getName(item).replace(/\.[a-z\d]+$/i, '');
+    const fallback = getName(item).replace(/\.[a-z\d]+$/i, '');
+    return /^[a-z\d_-]{8,}(?:\.\d+)?$/i.test(fallback)
+      ? 'Faixa sem título identificado' : fallback;
   }
 
   function read(doc, pageUrl, resourceUrls = []) {

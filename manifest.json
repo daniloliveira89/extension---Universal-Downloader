@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "Universal Music Downloader",
   "short_name": "Music Downloader",
-  "version": "3.4.0",
-  "description": "Baixa áudios com preferência por FLAC, subpastas com Ano - Nome do jogo e criação e validação de pastas antes do primeiro download e seleção múltipla.",
+  "version": "3.7.0",
+  "description": "Baixa áudios e playlists completas do SoundCloud, KHInsider e páginas web com títulos originais e organização em pastas.",
   "permissions": [
     "activeTab",
     "scripting",
@@ -11,7 +11,11 @@
     "storage"
   ],
   "host_permissions": [
-    "https://downloads.khinsider.com/*"
+    "https://downloads.khinsider.com/*",
+    "https://api-v2.soundcloud.com/*",
+    "https://*.sndcdn.com/*",
+    "https://*.soundcloud.com/*",
+    "https://*.soundcloud.cloud/*"
   ],
   "optional_host_permissions": [
     "https://*/*",

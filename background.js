@@ -39,7 +39,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
   const {url, filename} = message;
-  if (typeof url !== 'string' || !/^(?:https?:|data:text\/plain[,;])/i.test(url) ||
+  if (typeof url !== 'string' || !/^(?:https?:|blob:|data:)/i.test(url) ||
       typeof filename !== 'string' || !filename || filename.startsWith('/') ||
       filename.includes('\\') || filename.split('/').some(s => !s || s === '.' || s === '..')) {
     sendResponse({error:'Endereço ou nome de arquivo inválido.'});

@@ -20,7 +20,7 @@
     flushTimer = setTimeout(() => {
       if (!chrome.runtime?.id) return;
       const payload = snapshot();
-      const key = payload.tracks.map(t => t.url).join('\n');
+      const key = payload.tracks.map(t => `${t.url}\t${t.title}`).join('\n');
       if (key !== lastKey) {
         lastKey = key;
         chrome.runtime.sendMessage({ type: 'UNIVERSAL_AUDIO_UPDATE', payload }).catch(() => {});

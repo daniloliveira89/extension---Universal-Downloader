@@ -20,7 +20,6 @@ let stopRequested = false;
 let readSerial = 0;
 let lastCompletedDownloadId = null;
 let wrongFolderCount = 0;
-// Manter a âncora como referência à faixa, para respeitar os filtros de formato.
 let selectionAnchor = null;
 let selectionAnchorValue = true;
 let dragSelection = null;
@@ -51,11 +50,15 @@ function visible() {
   return currentMode === 'kh' || format === 'any' ? tracks : tracks.filter(t => t.ext === format);
 }
 function selected() { return visible().filter(t => t.selected); }
-function formatLabel(ext) { return ext === 'any' ? 'Todos disponíveis' : ext.toUpperCase(); }
+function formatLabel(ext) {
+  if (ext === 'any') return 'Todos disponíveis';
+  if (ext === 'm4a') return 'M4A (Áudio AAC)';
+  return ext.toUpperCase();
+}
 function setFormats(data) {
   UI.format.replaceChildren();
   const formats = currentMode === 'kh' ?
-    [data.formats.mp3 ? 'mp3' : null, data.formats.flac ? 'flac' : null].filter(Boolean) :
+    [data.formats?.mp3 ? 'mp3' : null, data.formats?.flac ? 'flac' : null].filter(Boolean) :
     ['any', ...new Set(data.tracks.map(t => t.ext).filter(ext => ALLOWED_FORMATS.has(ext)))];
   for (const format of formats) {
     const option = document.createElement('option');
@@ -103,13 +106,13 @@ function updateTrackState(track, state, error = '') {
   if (label) {
     label.textContent = state;
     label.title = error;
-    label.className = `song-state ${state === 'Concluído' ? 'done' : state === 'Erro' ? 'error' : ['Baixando', 'Localizando'].includes(state) || state.startsWith('Tentativa') ? 'working' : ''}`;
+    label.className = `song-state ${state === 'Concluído' ? 'done' : state === 'Erro' ? 'error' : state.startsWith('Baixando') || state.startsWith('Localizando') || state.startsWith('Tentativa') ? 'working' : ''}`;
   }
   updateControls();
 }
 function syncSelectionUI() {
   const files = visible();
-  UI.listCount.textContent = currentData ? `${files.length} ${files.length === 1 ? 'arquivo' : 'arquivos'} neste filtro · ${files.filter(t => t.selected).length} selecionados` : 'Nenhum arquivo identificado';
+  UI.listCount.textContent = currentData ? `${files.length} ${currentMode === 'soundcloud' ? (files.length === 1 ? 'faixa' : 'faixas') : (files.length === 1 ? 'arquivo' : 'arquivos')} neste filtro · ${files.filter(t => t.selected).length} selecionados` : 'Nenhum arquivo identificado';
   for (const row of UI.tracks.querySelectorAll('li[data-visible-index]')) {
     const item = files[Number(row.dataset.visibleIndex)];
     if (!item) continue;
@@ -130,7 +133,7 @@ function renderTracks() {
   cancelSelectionDrag();
   UI.tracks.replaceChildren();
   const files = visible();
-  UI.listCount.textContent = currentData ? `${files.length} ${files.length === 1 ? 'arquivo' : 'arquivos'} neste filtro · ${files.filter(t => t.selected).length} selecionados` : 'Nenhum arquivo identificado';
+  UI.listCount.textContent = currentData ? `${files.length} ${currentMode === 'soundcloud' ? (files.length === 1 ? 'faixa' : 'faixas') : (files.length === 1 ? 'arquivo' : 'arquivos')} neste filtro · ${files.filter(t => t.selected).length} selecionados` : 'Nenhum arquivo identificado';
   if (!files.length) {
     const row = document.createElement('li');
     row.className = 'empty';
@@ -164,13 +167,11 @@ function renderTracks() {
     state.id = `state-${i}`;
     state.textContent = track.state;
     state.title = track.error;
-    state.className = `song-state ${track.state === 'Concluído' ? 'done' : track.state === 'Erro' ? 'error' : ''}`;
+    state.className = `song-state ${track.state === 'Concluído' ? 'done' : track.state === 'Erro' ? 'error' : track.state.startsWith('Baixando') || track.state.startsWith('Localizando') ? 'working' : ''}`;
     row.append(checkbox, num, name, ext, state);
     UI.tracks.append(row);
   });
 }
-// Faixas isoladas alternam individualmente. Shift aplica a ação da âncora
-// a todas as faixas do intervalo, sem alterar as demais.
 function clickSelection(index, shiftKey) {
   if (running || loading) return;
   const files = visible();
@@ -226,7 +227,6 @@ function scrollDuringDrag() {
       drag.edgeZone = zone;
       drag.edgeSince = performance.now();
     }
-    // Pausa curta: passar rapidamente pela borda não deve deslocar a seleção.
     if (performance.now() - drag.edgeSince >= 380) {
       const before = UI.tracks.scrollTop;
       UI.tracks.scrollTop += delta;
@@ -242,7 +242,6 @@ function scrollDuringDrag() {
 UI.tracks.addEventListener('click', event => {
   if (suppressClickAfterDrag) {
     event.preventDefault();
-    // Cancelar o clique pode restaurar a caixa nativa; revalidar com os dados.
     setTimeout(() => syncSelectionUI(), 0);
     return;
   }
@@ -276,7 +275,7 @@ document.addEventListener('pointermove', event => {
     if (index === drag.startIndex && Math.hypot(event.clientX - drag.originX, event.clientY - drag.originY) < 6) return;
     drag.active = true;
     UI.tracks.classList.add('drag-selecting');
-    drag.lastIndex = -1; // Forçar a aplicação mesmo na primeira faixa.
+    drag.lastIndex = -1;
     dragScrollFrame = requestAnimationFrame(scrollDuringDrag);
   }
   event.preventDefault();
@@ -303,34 +302,42 @@ function showPage(data, url, mode) {
   UI.pageInfo.hidden = false;
   UI.pageTitle.textContent = data.title;
   UI.openPage.href = url;
-  UI.foundCount.textContent = `${data.tracks.length} ${data.tracks.length === 1 ? 'arquivo' : 'arquivos'}`;
-  UI.sourceDescription.textContent = mode === 'kh' ? 'Reconhecimento especializado KHInsider' : 'Detecção genérica de áudio';
-  UI.mode.textContent = mode === 'kh' ? 'KHInsider reconhecido' : 'Detecção universal';
-  UI.mode.className = `pill ${mode === 'kh' ? 'special' : 'generic'}`;
+  UI.foundCount.textContent = `${data.tracks.length} ${mode === 'soundcloud' ? (data.tracks.length === 1 ? 'faixa' : 'faixas') : (data.tracks.length === 1 ? 'arquivo' : 'arquivos')}`;
+  UI.sourceDescription.textContent = mode === 'kh' ? 'Reconhecimento especializado KHInsider' :
+    mode === 'soundcloud' ? 'Metadados oficiais da playlist SoundCloud' : 'Detecção genérica de áudio';
+  UI.mode.textContent = mode === 'kh' ? 'KHInsider reconhecido' :
+    mode === 'soundcloud' ? 'SoundCloud reconhecido' : 'Detecção universal';
+  UI.mode.className = `pill ${mode === 'kh' ? 'special' : mode === 'soundcloud' ? 'special' : 'generic'}`;
   UI.folder.value = data.folder;
   setFormats(data);
-  // FLAC é a primeira escolha em qualquer site. Se indisponível, preferir MP3.
+  // Prioriza FLAC se houver; se não houver, mantém 'any' ou M4A/MP3
   UI.format.value = [...UI.format.options].some(op => op.value === 'flac') ? 'flac' :
-    [...UI.format.options].some(op => op.value === 'mp3') ? 'mp3' :
+    [...UI.format.options].some(op => op.value === 'any') ? 'any' :
     UI.format.options[0]?.value || 'any';
   renderTracks();
   updateControls();
 }
 function mergeGeneric(data, url) {
   if (!data?.tracks || !Array.isArray(data.tracks)) return;
-  const old = new Map(tracks.map(t => [t.url, t]));
+  const old = new Map(tracks.map(t => [t.url || t.id, t]));
   const incoming = data.tracks.filter(t =>
-    t && typeof t.url === 'string' && typeof t.title === 'string' && ALLOWED_FORMATS.has(t.ext) && /^https?:\/\//i.test(t.url));
-  const merged = incoming.map(t => old.get(t.url) || { ...t, selected: true, state: 'Pendente', error: '' });
+    t && (typeof t.url === 'string' || t.id) && typeof t.title === 'string');
+  const merged = incoming.map(t => {
+    const key = t.url || t.id;
+    const previous = old.get(key);
+    if (!previous) {
+      return { ...t, selected: t.selected ?? true, state: t.state || 'Pendente', error: '' };
+    }
+    return { ...previous, ...t, selected: previous.selected, state: previous.state, error: previous.error };
+  });
   if (currentMode === 'generic' && currentUrl === url) {
-    // Não apagar arquivos antigos ao detectar mais links durante o carregamento dinâmico.
-    const added = new Set(merged.map(t => t.url));
-    for (const t of tracks) if (!added.has(t.url)) merged.push(t);
+    const added = new Set(merged.map(t => t.url || t.id));
+    for (const t of tracks) if (!added.has(t.url || t.id)) merged.push(t);
   }
-  const previousFormat = currentMode === 'generic' && currentUrl === url ? UI.format.value : null;
-  const previousFolder = currentMode === 'generic' && currentUrl === url ? UI.folder.value : '';
+  const previousFormat = currentUrl === url ? UI.format.value : null;
+  const previousFolder = currentUrl === url ? UI.folder.value : '';
   tracks = merged;
-  showPage({ ...data, tracks }, url, 'generic');
+  showPage({ ...data, tracks }, url, data.source === 'soundcloud' ? 'soundcloud' : 'generic');
   if (previousFolder) UI.folder.value = previousFolder;
   if (previousFormat && [...UI.format.options].some(op => op.value === previousFormat)) UI.format.value = previousFormat;
   renderTracks();
@@ -390,6 +397,26 @@ async function loadKh(url) {
     setStatus(`Não foi possível analisar o álbum: ${err.message}`, 'error');
   } finally { loading = false; updateControls(); }
 }
+async function loadSoundCloud(url, tabId = null) {
+  loading = true;
+  const seq = ++readSerial;
+  resetPage();
+  setStatus('Lendo faixas e metadados do SoundCloud...', 'active');
+  updateControls();
+  try {
+    const data = await SoundCloudApi.loadPlaylist(tabId, url);
+    if (seq !== readSerial) return;
+    mergeGeneric(data, url);
+    const count = data.tracks.length;
+    setStatus(`SoundCloud identificado: ${count} ${count === 1 ? 'faixa pronta' : 'faixas prontas'} para download com títulos originais.`, 'ok');
+  } catch (err) {
+    resetPage();
+    setStatus(`Não foi possível analisar o SoundCloud: ${err.message}`, 'error');
+  } finally {
+    loading = false;
+    updateControls();
+  }
+}
 async function scanActiveTab(tabId, pageUrl) {
   loading = true;
   const seq = ++readSerial;
@@ -397,6 +424,10 @@ async function scanActiveTab(tabId, pageUrl) {
   setStatus('Detectando arquivos de áudio na aba...', 'active');
   updateControls();
   try {
+    if (SoundCloudApi.isSoundCloudUrl(pageUrl)) {
+      await loadSoundCloud(pageUrl, tabId);
+      return;
+    }
     await chrome.scripting.executeScript({ target: { tabId }, files: ['naming.js', 'generic.js', 'content.js'] });
     const result = await chrome.tabs.sendMessage(tabId, { type: 'UNIVERSAL_AUDIO_SCAN' });
     if (seq !== readSerial) return;
@@ -425,13 +456,16 @@ async function loadManualGeneric(url) {
     setStatus(`Não foi possível ler a página: ${err.message}`, 'error');
   } finally { loading = false; updateControls(); }
 }
-// Chamado diretamente do clique para que a solicitação mantenha a interação do usuário.
 function loadTypedUrl(raw) {
   if (running || loading) return;
   let url;
   try { url = safeUrl(raw); } catch (err) { setStatus(err.message, 'error'); return; }
   const album = khAlbum(url);
   if (album) { loadKh(album); return; }
+  if (SoundCloudApi.isSoundCloudUrl(url)) {
+    loadSoundCloud(url, sourceTabId);
+    return;
+  }
   if (sourceTabId != null && sourceTabUrl && url === safeUrl(sourceTabUrl)) { scanActiveTab(sourceTabId, url); return; }
   const originPattern = `${new URL(url).origin}/*`;
   chrome.permissions.request({ origins: [originPattern] })
@@ -441,7 +475,6 @@ function loadTypedUrl(raw) {
     })
     .catch(err => setStatus(`Permissão recusada ou indisponível: ${err.message}`, 'error'));
 }
-// Pedir ao background que controle o nome final, inclusive durante onDeterminingFilename.
 async function managedDownload(url, filename) {
   const result = await chrome.runtime.sendMessage({ type: 'UMD_DOWNLOAD', url, filename });
   if (!Number.isInteger(result?.id)) throw new Error(result?.error || 'Não foi possível iniciar o download.');
@@ -492,8 +525,6 @@ async function checkFolderLocation(id, folder, track) {
   return true;
 }
 
-// Teste automático ANTES de baixar várias músicas. Evita despejar áudios
-// na raiz de Downloads se algum gerenciador ignorar o caminho solicitado.
 async function verifyAndCreateFolder(folder) {
   if (!folder) return;
   setStatus(`Preparando e verificando a pasta “${folder}”...`, 'active');
@@ -504,7 +535,6 @@ async function verifyAndCreateFolder(folder) {
   const [record] = await chrome.downloads.search({id});
   const actual = record?.filename || '';
   const ok = !!actual && savedToFolder(actual, folder);
-  // Deixar a pasta criada, mas excluir o arquivo temporário.
   try {
     await chrome.downloads.removeFile(id);
     await chrome.downloads.erase({id});
@@ -514,17 +544,30 @@ async function verifyAndCreateFolder(folder) {
   }
   setStatus(`Pasta verificada: ${folder}. Iniciando músicas...`, 'ok');
 }
+
 async function downloadOne(track, folder, format) {
   for (let attempt = 1; attempt <= 3; attempt++) {
     if (stopRequested && attempt > 1) { updateTrackState(track, 'Pendente'); return; }
+    let blobToRevoke = null;
     try {
       let audioUrl = track.url;
       if (currentMode === 'kh') {
         updateTrackState(track, 'Localizando');
         audioUrl = KHParser.discoverMedia(await getHtml(track.url), track.url, format);
+      } else if (currentMode === 'soundcloud' || track.media || track.soundcloudTrackId) {
+        updateTrackState(track, 'Localizando');
+        const sc = await SoundCloudApi.resolveAudio(track, format, (pct) => {
+          updateTrackState(track, `Baixando ${pct}`);
+        }, () => stopRequested);
+        audioUrl = sc.url;
+        if (sc.blobUrl) blobToRevoke = sc.blobUrl;
+        if (sc.ext) track.ext = sc.ext;
       }
-      const file = currentMode === 'kh' ? KHParser.fileNameFromUrl(audioUrl) : AudioScanner.getName({ url: audioUrl, ext: track.ext });
+      const file = currentMode === 'kh'
+        ? KHParser.fileNameFromUrl(audioUrl)
+        : AudioScanner.getName({ url: audioUrl, ext: track.ext, title: track.title });
       const path = folder ? `${folder}/${file}` : file;
+
       updateTrackState(track, 'Baixando');
       const id = await managedDownload(audioUrl, path);
       if (!Number.isInteger(id)) throw new Error('O Chrome não iniciou o download.');
@@ -533,7 +576,7 @@ async function downloadOne(track, folder, format) {
       UI.showFile.hidden = false;
       if (!await checkFolderLocation(id, folder, track)) {
         updateTrackState(track, 'Erro', track.error);
-        stopRequested = true; // Evitar novos downloads fora da pasta.
+        stopRequested = true;
         return;
       }
       updateTrackState(track, 'Concluído');
@@ -542,9 +585,14 @@ async function downloadOne(track, folder, format) {
       if (attempt === 3) { updateTrackState(track, 'Erro', err.message); return; }
       updateTrackState(track, `Tentativa ${attempt + 1}/3`, err.message);
       await delay(1100 * attempt);
+    } finally {
+      if (blobToRevoke) {
+        try { URL.revokeObjectURL(blobToRevoke); } catch {}
+      }
     }
   }
 }
+
 async function startDownloads() {
   if (loading || running || !currentData) return;
   wrongFolderCount = 0;
@@ -559,7 +607,6 @@ async function startDownloads() {
   renderTracks();
   try {
     if (folder) await verifyAndCreateFolder(folder);
-    // Workers concorrentes: nunca manter mais tarefas ativas que o limite definido.
     const concurrency = Math.min(Math.max(Number(UI.parallel.value) || 1, 1), 4, queue.length);
     let cursor = 0;
     let started = 0;
@@ -593,6 +640,10 @@ async function reanalyze() {
   if (running || loading || !currentUrl) return;
   const album = khAlbum(currentUrl);
   if (album) { await loadKh(album); return; }
+  if (SoundCloudApi.isSoundCloudUrl(currentUrl)) {
+    await loadSoundCloud(currentUrl, sourceTabId);
+    return;
+  }
   if (sourceTabId != null && currentUrl === sourceTabUrl) {
     await scanActiveTab(sourceTabId, currentUrl);
     return;
@@ -643,6 +694,7 @@ if (sourceTabUrl) {
   UI.pageUrl.value = sourceTabUrl;
   const album = khAlbum(sourceTabUrl);
   if (album) loadKh(album);
+  else if (SoundCloudApi.isSoundCloudUrl(sourceTabUrl)) loadSoundCloud(sourceTabUrl, sourceTabId);
   else if (sourceTabId != null && /^https?:\/\//i.test(sourceTabUrl)) scanActiveTab(sourceTabId, safeUrl(sourceTabUrl));
   else setStatus('O Chrome não permite analisar esta página. Abra um site HTTP(S).', 'warn');
 }
