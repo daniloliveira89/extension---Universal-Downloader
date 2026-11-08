@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Universal Music Downloader</title>
+  <link rel="icon" type="image/png" href="icons/icon32.png">
+  <link rel="stylesheet" href="style.css">
+  <script src="naming.js" defer></script>
+  <script src="khinsider.js" defer></script>
+  <script src="generic.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <img src="icons/icon128.png" width="58" height="58" alt="" class="brand-icon">
+      <div class="branding"><span class="tagline">DOWNLOAD DE ÁUDIO <span class="tag">VERSÃO 3.3</span></span><h1>Universal <em>Music Downloader</em></h1></div>
+    </header>
+
+    <section class="panel controls-panel">
+      <div class="section-heading">
+        <div class="heading-with-help"><h2>Preparar download</h2>
+          <span class="help-tip" tabindex="0" role="note" aria-label="Escolha o formato, a pasta e a quantidade de downloads simultâneos. Depois de encontrar as músicas, inicie o download.">ⓘ<span class="tip-text" role="tooltip">Escolha o formato, a pasta e a quantidade de downloads simultâneos. Depois de encontrar as músicas, inicie o download.</span></span>
+        </div><span id="destinationTitle" class="subtle">Pasta Downloads</span>
+      </div>
+      <div class="preferences">
+        <div class="field"><label for="format">Formato <span class="help-tip" tabindex="0" role="note" aria-label="FLAC é priorizado quando houver. Se não estiver disponível, a extensão escolhe MP3 ou outro formato encontrado.">ⓘ<span class="tip-text" role="tooltip">FLAC é priorizado quando houver. Se não estiver disponível, a extensão escolhe MP3 ou outro formato encontrado.</span></span></label><select id="format" disabled><option value="flac">FLAC</option></select></div>
+        <div class="field folder-field"><label for="folder">Nome da pasta <span class="help-tip" tabindex="0" role="note" aria-label="O nome sugerido usa Ano - Nome do jogo, removendo complementos como Original Soundtrack. Você pode editar antes do download. A extensão verifica a pasta automaticamente antes de iniciar as músicas.">ⓘ<span class="tip-text" role="tooltip">O nome sugerido usa Ano - Nome do jogo, removendo complementos como Original Soundtrack. Você pode editar antes do download. A extensão verifica a pasta automaticamente antes de iniciar as músicas.</span></span></label><input id="folder" type="text" placeholder="Ano - Nome do álbum" maxlength="100" disabled></div>
+        <div class="field field-parallel"><label for="parallel">Downloads simultâneos <span class="help-tip" tabindex="0" role="note" aria-label="Mais downloads em paralelo podem ser mais rápidos, mas dependem do servidor. Se ocorrerem erros ou bloqueios, reduza para 1.">ⓘ<span class="tip-text" role="tooltip">Mais downloads em paralelo podem ser mais rápidos, mas dependem do servidor. Se ocorrerem erros ou bloqueios, reduza para 1.</span></span></label><select id="parallel"><option value="1">1 · Sequencial</option><option value="2">2 simultâneos</option><option value="3">3 simultâneos</option><option value="4">4 simultâneos</option></select></div>
+      </div>
+      <label class="checkline"><input id="useFolder" type="checkbox" checked><span>Organizar em uma pasta <span class="help-tip" tabindex="0" role="note" aria-label="A extensão tenta criar e verificar a pasta automaticamente antes de baixar as músicas. Desative Perguntar onde salvar cada arquivo em chrome://settings/downloads caso ele ignore a pasta.">ⓘ<span class="tip-text" role="tooltip">A extensão cria um arquivo temporário para verificar a pasta e remove esse arquivo antes de baixar as músicas. Se não aparecer, confira chrome://settings/downloads e desative “Perguntar onde salvar cada arquivo”. Outras extensões também podem alterar o destino.</span></span></span></label>
+      <div class="progress-heading"><span id="counter">0 de 0 concluídos</span><span id="percent">0%</span></div>
+      <div class="progress-track"><div id="progress" class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuenow="0" aria-valuemax="0"></div></div>
+      <div class="button-group"><button id="start" class="primary" disabled>Baixar arquivos selecionados</button><button id="stop" class="outline danger" disabled>Parar após os ativos</button><button id="refresh" class="outline" disabled>Reanalisar</button><button id="showFile" type="button" class="outline" hidden>Mostrar arquivo na pasta</button></div>
+    </section>
+
+    <section class="panel detect-panel">
+      <div class="section-heading"><div class="heading-with-help"><h2>Encontrar músicas</h2>
+        <span class="help-tip" tabindex="0" role="note" aria-label="Abra o site no Chrome e clique no ícone da extensão para detectar áudio carregado dinamicamente. Ao colar um link, a análise procura áudio presente no HTML da página.">ⓘ<span class="tip-text" role="tooltip">Abra o site no Chrome e clique no ícone da extensão para detectar áudio carregado dinamicamente. Ao colar um link, a análise procura áudio presente no HTML da página.</span></span>
+      </div><span id="mode" class="pill">Aguardando página</span></div>
+      <form id="urlForm" class="url-form"><label for="pageUrl">Endereço da página ou álbum</label><div class="input-row"><input id="pageUrl" type="url" placeholder="https://site.com/album..." spellcheck="false" autocomplete="url" required><button class="outline" id="load" type="submit">Analisar link</button></div></form>
+      <div class="result" id="pageInfo" hidden><span class="tiny">PÁGINA IDENTIFICADA</span><div class="result-heading"><h3 id="pageTitle"></h3><a id="openPage" href="#" target="_blank" rel="noopener noreferrer" title="Abrir página">↗</a></div><div class="result-meta"><span id="foundCount"></span><span id="sourceDescription"></span></div></div>
+      <div class="status-bar" role="status"><span class="dot" id="statusDot"></span><span id="status">Abra uma página de músicas e clique no ícone da extensão.</span></div>
+    </section>
+
+    <section class="panel list-panel"><div class="section-heading"><div class="heading-with-help"><h2>Arquivos encontrados</h2><span class="help-tip" tabindex="0" role="note" aria-label="Clique para marcar ou desmarcar. Shift mais clique aplica a mesma ação ao intervalo; Ctrl mais clique permite alterar faixas avulsas; clique e arraste sobre a lista para marcar ou desmarcar várias seguidas.">ⓘ<span class="tip-text" role="tooltip">Clique para marcar/desmarcar. <strong>Shift + clique</strong>: intervalo entre a última faixa alterada e a atual. <strong>Ctrl + clique</strong>: faixas avulsas. <strong>Arraste</strong> o mouse para marcar ou desmarcar um intervalo; aproxime da borda para rolar.</span></span></div><div class="selection"><button id="selectAll" type="button" class="text-button" disabled>Marcar todos</button><button id="selectNone" type="button" class="text-button" disabled>Desmarcar</button><button id="selectInvert" type="button" class="text-button" disabled>Inverter</button></div></div><p class="mini-label" id="listCount">Nenhum arquivo identificado</p><ol id="tracks" class="track-list"><li class="empty">Nenhum arquivo identificado.</li></ol></section>
+    <footer><span class="help-tip" tabindex="0" role="note" aria-label="A extensão detecta arquivos de áudio acessíveis, não contorna DRM nem converte transmissões em streaming. Mantenha a aba aberta durante os downloads e permita múltiplos downloads quando solicitado.">ⓘ<span class="tip-text" role="tooltip">A extensão detecta arquivos de áudio acessíveis, não contorna DRM nem converte transmissões em streaming. Mantenha a aba aberta durante os downloads e permita múltiplos downloads quando solicitado.</span></span><span>v3.3.0</span></footer>
+  </main>
+</body>
+</html>

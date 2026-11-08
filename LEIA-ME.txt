@@ -1,0 +1,34 @@
+UNIVERSAL MUSIC DOWNLOADER — VERSÃO 3.4.0
+==========================================
+
+CORREÇÃO DAS PASTAS (IMPORTANTE)
+- Sempre que a opção "Organizar em uma pasta" está ativa, a extensão primeiro
+  baixa um pequeno arquivo de teste na pasta desejada, verifica o caminho REAL
+  informado pelo Chrome e exclui o teste. A pasta deve permanecer criada.
+- Somente após a confirmação os downloads de áudio começam. Caso o navegador
+  salve fora da pasta, a fila é interrompida para evitar bagunçar Downloads.
+- O service worker também solicita o caminho durante o evento de determinação
+  de nome (onDeterminingFilename), quando esse evento é disparado.
+- Outra extensão de download, antivírus ou configurações do navegador podem
+  sobrescrever a escolha; nenhuma extensão consegue garantir o destino se o
+  Chrome ou outro programa o alterar. O erro exibe o destino efetivo.
+
+SE CONTINUAR SEM PASTA
+1. Abra chrome://settings/downloads e desative "Perguntar onde salvar cada arquivo".
+2. Desative temporariamente outras extensões de download (IDM, Download Manager etc.).
+3. Teste novamente em um álbum pequeno e confira a mensagem de erro.
+4. Se o erro persistir, envie o TEXTO EXATO da mensagem e o caminho real exibido
+   (pode ocultar seu nome de usuário do Windows).
+
+ATUALIZAÇÃO
+Extraia a pasta Universal_Music_Downloader_3_4 do ZIP e carregue-a em
+chrome://extensions (Modo do desenvolvedor > Carregar sem compactação).
+Após testar, remova as versões antigas da extensão para não confundir os ícones.
+
+RECURSOS PRESERVADOS
+- KHInsider + leitura genérica de áudio; FLAC como padrão quando disponível.
+- Ano - Nome do jogo (sem o sufixo "Original Soundtrack").
+- Seleção por Shift, Ctrl, arrasto, Selecionar todos / Nenhum / Inverter.
+- Downloads paralelos (1 a 4), com acompanhamento e interrupção.
+- Todos os downloads são relativos à pasta padrão de downloads do Chrome.
+- Não acessa streams protegidos por DRM.
